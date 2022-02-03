@@ -1,12 +1,13 @@
 package database;
 
-import java.util.HashMap;
+import java.util.*;
 
 import java.util.Map.Entry;
-import java.util.Optional;
+
 import model.appointment.Appointment;
 import model.appointment.AppointmentId;
 import model.appointment.AppointmentType;
+import model.role.PatientId;
 
 public class Database {
   private final HashMap<AppointmentType, HashMap<AppointmentId, Appointment>> hashMap;
@@ -28,6 +29,15 @@ public class Database {
       hashMap.put(type, new HashMap<>());
     }
     hashMap.get(type).put(id, new Appointment(id, capacity));
+  }
+
+  public synchronized void add(PatientId patientId, AppointmentId appointmentId, AppointmentType type) {
+    if (!hashMap.containsKey(type)) {
+      hashMap.put(type, new HashMap<>());
+    }
+    hashMap.get(type).get(appointmentId).addPatient(patientId);
+    int capacity = hashMap.get(type).get(appointmentId).getRemainingCapacity();
+    hashMap.get(type).put(appointmentId, new Appointment(appointmentId, capacity));
   }
 
   public synchronized void remove(AppointmentId id, AppointmentType type) {
@@ -53,6 +63,32 @@ public class Database {
       return Optional.empty();
     }
   }
+
+  public List<Appointment> findById(PatientId pid) {
+    List<Appointment> appointments = null;
+    hashMap.values().forEach(mmp-> mmp.values().forEach(mmp2-> {
+      ArrayList<PatientId> ids= mmp2.getPatientIds();
+      for(PatientId idd:ids){
+        if (idd == pid) {
+          AppointmentId appointId = mmp2.getAppointmentId();
+          var appointment = mmp.get(appointId);
+          appointments.add(appointment);
+
+      }
+    }
+  })
+    );
+    if (appointments != null) {
+      return appointments;
+    } else {
+      return Collections.emptyList();
+    }
+  }
+
+
+
+
+
 
   public Optional<AppointmentId> findNextAppointmentId(
       AppointmentType type, AppointmentId thisId) {
